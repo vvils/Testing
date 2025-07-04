@@ -1,0 +1,82 @@
+# Production Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simple-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: simple-app
+  template:
+    metadata:
+      labels:
+        app: simple-app
+    spec:
+      containers:
+        - name: simple-app
+          image: wilsonw321/simple-app:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "250m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          env:
+            - name: ENVIRONMENT
+              value: "production"
+          livenessProbe:
+            httpGet:
+              path: /health.html
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health.html
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+
+---
+# Production Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: simple-app-service
+spec:
+  selector:
+    app: simple-app
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP
+
+---
+# Production Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: simple-app-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: yourdomain.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: simple-app-service
+                port:
+                  number: 80

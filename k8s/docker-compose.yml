@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  simple-app-dev:
+    image: nginx:alpine
+    container_name: simple-app-dev
+    ports:
+      - "3000:80"
+    volumes:
+      # Mount the entire current directory for hot reloading
+      - .:/usr/share/nginx/html
+      # Optional: Mount nginx config if you want to customize it
+      # - ./nginx.conf:/etc/nginx/nginx.conf
+    restart: unless-stopped
+    # Optional: Add labels for better organization
+    labels:
+      - "project=simple-app"
+      - "environment=development"

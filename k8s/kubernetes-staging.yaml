@@ -1,0 +1,84 @@
+# Staging Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simple-app-staging
+  namespace: staging
+spec:
+  replicas: 1  # Single replica for staging
+  selector:
+    matchLabels:
+      app: simple-app-staging
+  template:
+    metadata:
+      labels:
+        app: simple-app-staging
+    spec:
+      containers:
+        - name: simple-app
+          image: wilsonw321/simple-app:staging  # Different tag for staging
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "250m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          env:
+            - name: ENVIRONMENT
+              value: "staging"
+            - name: DEBUG
+              value: "true"
+          livenessProbe:
+            httpGet:
+              path: /health.html  # Dedicated health endpoint
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health.html
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+---
+# Staging Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: simple-app-staging-service
+  namespace: staging
+spec:
+  selector:
+    app: simple-app-staging
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP
+
+---
+# Staging Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: simple-app-staging-ingress
+  namespace: staging
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: staging.yourdomain.com  # Different host for staging
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: simple-app-staging-service
+                port:
+                  number: 80 

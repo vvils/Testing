@@ -1,0 +1,50 @@
+# Ignore environment variable files
+.env
+.env.*
+
+# Ignore Kubernetes config
+kubeconfig
+.kube/
+
+# Ignore Docker build artifacts
+*.log
+*.pid
+*.sock
+*.tmp
+*.swp
+
+# Ignore node modules (if using Node.js)
+node_modules/
+
+# Ignore Python cache (if using Python)
+__pycache__/
+*.pyc
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore editor/project files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Ignore test and coverage output
+coverage/
+*.lcov
+
+# Ignore build output
+build/
+dist/
+
+# Ignore backup files
+*~
+*.bak
+
+# Ignore GitHub runner directories
+actions-runner/
+actions-runner-*/
+
+# Ignore sensitive markdowns (if you ever store secrets)
+*_SECRET.md 
