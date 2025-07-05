@@ -13,7 +13,7 @@ env:
 
 jobs:
   build-and-deploy-staging:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: github.event_name == 'pull_request'
     steps:
       - name: Checkout code
@@ -104,7 +104,7 @@ jobs:
           echo "Access via: kubectl port-forward service/simple-app-staging-service 3001:80 -n staging"
 
   build-and-deploy-production:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     steps:
       - name: Checkout code
