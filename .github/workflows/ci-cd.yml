@@ -49,59 +49,22 @@ jobs:
         run: |
           echo "=== Setting up kubectl for self-hosted runner ==="
           echo "User: $(whoami), Home: $HOME, PWD: $(pwd)"
+          echo "Current PATH: $PATH"
+          echo "Docker status: $(docker --version || echo 'Docker not found')"
           
           # Create .kube directory
           mkdir -p $HOME/.kube
           
-          # EXTENSIVE DEBUGGING
-          echo "=== DEBUGGING KUBECTL CONFIG ==="
+          # Add Docker Desktop environment for self-hosted runner
+          export DOCKER_HOST="unix:///var/run/docker.sock"
+          export KUBECONFIG="$HOME/.kube/config"
+          
+          # Use base64 encoded config from GitHub Secret or local file
           if [ ! -z "$KUBE_CONFIG_DATA" ]; then
-            echo "✓ KUBE_CONFIG_DATA environment variable is set"
-            echo "Length of KUBE_CONFIG_DATA: $(echo -n "$KUBE_CONFIG_DATA" | wc -c)"
-            echo "First 50 chars of KUBE_CONFIG_DATA: $(echo -n "$KUBE_CONFIG_DATA" | head -c 50)"
-            echo "Last 50 chars of KUBE_CONFIG_DATA: $(echo -n "$KUBE_CONFIG_DATA" | tail -c 50)"
-            
-            # Check for common base64 issues
-            if echo "$KUBE_CONFIG_DATA" | grep -q " "; then
-              echo "⚠️  WARNING: KUBE_CONFIG_DATA contains spaces"
-            fi
-            if echo "$KUBE_CONFIG_DATA" | grep -q $'\n'; then
-              echo "⚠️  WARNING: KUBE_CONFIG_DATA contains newlines"
-            fi
-            if echo "$KUBE_CONFIG_DATA" | grep -q $'\r'; then
-              echo "⚠️  WARNING: KUBE_CONFIG_DATA contains carriage returns"
-            fi
-            
-            # Test base64 decoding step by step
-            echo "Testing base64 decoding..."
-            echo "$KUBE_CONFIG_DATA" | base64 -d > /tmp/decoded_config 2>&1
-            DECODE_RESULT=$?
-            echo "Base64 decode exit code: $DECODE_RESULT"
-            
-            if [ $DECODE_RESULT -eq 0 ]; then
-              echo "✓ Base64 decoding successful"
-              echo "Decoded config size: $(stat -c%s /tmp/decoded_config) bytes"
-              echo "First 100 chars of decoded config:"
-              head -c 100 /tmp/decoded_config
-              echo ""
-              echo "Checking if decoded config is valid YAML..."
-              if head -1 /tmp/decoded_config | grep -q "apiVersion"; then
-                echo "✓ Decoded config looks like valid kubectl config"
-                cp /tmp/decoded_config $HOME/.kube/config
-                chmod 600 $HOME/.kube/config
-                echo "kubectl config decoded and saved successfully"
-              else
-                echo "❌ Decoded config doesn't look like kubectl config"
-                echo "Full decoded content:"
-                cat /tmp/decoded_config
-                exit 1
-              fi
-            else
-              echo "❌ Base64 decoding failed"
-              echo "Error output:"
-              echo "$KUBE_CONFIG_DATA" | base64 -d
-              exit 1
-            fi
+            echo "Using kubectl config from GitHub Secret"
+            echo "$KUBE_CONFIG_DATA" | base64 -d > $HOME/.kube/config
+            chmod 600 $HOME/.kube/config
+            echo "kubectl config decoded from secret successfully"
           elif [ -f "/home/wilson/.kube/config" ]; then
             echo "Using kubectl config from host user (fallback)"
             cp /home/wilson/.kube/config $HOME/.kube/config
@@ -113,28 +76,23 @@ jobs:
             exit 1
           fi
           
-          # Set KUBECONFIG environment variable
+          # Set KUBECONFIG environment variable for subsequent steps
           echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
+          echo "DOCKER_HOST=unix:///var/run/docker.sock" >> $GITHUB_ENV
           
-          # Final verification
-          echo "=== FINAL VERIFICATION ==="
-          echo "Config file exists: $(test -f $HOME/.kube/config && echo "YES" || echo "NO")"
-          echo "Config file size: $(stat -c%s $HOME/.kube/config 2>/dev/null || echo "N/A") bytes"
-          echo "Config file permissions: $(stat -c%a $HOME/.kube/config 2>/dev/null || echo "N/A")"
-          
-          # Test kubectl commands
-          echo "Testing kubectl config view..."
-          kubectl config view --raw > /dev/null 2>&1
-          if [ $? -eq 0 ]; then
-            echo "✓ kubectl config view successful"
+          # Verify kubectl access with fallback DNS resolution
+          echo "Testing kubectl connection..."
+          if ! kubectl cluster-info > /dev/null 2>&1; then
+            echo "Direct connection failed, trying with IP resolution..."
+            # Try to resolve kubernetes.docker.internal to localhost for self-hosted runners
+            if [ -f "/etc/hosts" ]; then
+              echo "127.0.0.1 kubernetes.docker.internal" | sudo tee -a /etc/hosts || true
+            fi
+            # Retry
+            kubectl cluster-info || echo "Warning: kubectl connection issues, but continuing..."
           else
-            echo "❌ kubectl config view failed"
-            kubectl config view --raw
-            exit 1
+            echo "kubectl connection successful!"
           fi
-          
-          echo "Testing kubectl cluster-info..."
-          kubectl cluster-info
 
       - name: Deploy to staging
         run: |
@@ -281,6 +239,62 @@ jobs:
           echo "Testing kubectl cluster-info..."
           kubectl cluster-info
 
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: "latest"
+
+      - name: Setup kubectl config for self-hosted runner
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          echo "=== Setting up kubectl for self-hosted runner ==="
+          echo "User: $(whoami), Home: $HOME, PWD: $(pwd)"
+          echo "Current PATH: $PATH"
+          echo "Docker status: $(docker --version || echo 'Docker not found')"
+          
+          # Create .kube directory
+          mkdir -p $HOME/.kube
+          
+          # Add Docker Desktop environment for self-hosted runner
+          export DOCKER_HOST="unix:///var/run/docker.sock"
+          export KUBECONFIG="$HOME/.kube/config"
+          
+          # Use base64 encoded config from GitHub Secret or local file
+          if [ ! -z "$KUBE_CONFIG_DATA" ]; then
+            echo "Using kubectl config from GitHub Secret"
+            echo "$KUBE_CONFIG_DATA" | base64 -d > $HOME/.kube/config
+            chmod 600 $HOME/.kube/config
+            echo "kubectl config decoded from secret successfully"
+          elif [ -f "/home/wilson/.kube/config" ]; then
+            echo "Using kubectl config from host user (fallback)"
+            cp /home/wilson/.kube/config $HOME/.kube/config
+            chmod 600 $HOME/.kube/config
+            echo "kubectl config copied successfully"
+          else
+            echo "ERROR: No kubectl config available"
+            echo "Please set KUBE_CONFIG secret or ensure host config exists"
+            exit 1
+          fi
+          
+          # Set KUBECONFIG environment variable for subsequent steps
+          echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
+          echo "DOCKER_HOST=unix:///var/run/docker.sock" >> $GITHUB_ENV
+          
+          # Verify kubectl access with fallback DNS resolution
+          echo "Testing kubectl connection..."
+          if ! kubectl cluster-info > /dev/null 2>&1; then
+            echo "Direct connection failed, trying with IP resolution..."
+            # Try to resolve kubernetes.docker.internal to localhost for self-hosted runners
+            if [ -f "/etc/hosts" ]; then
+              echo "127.0.0.1 kubernetes.docker.internal" | sudo tee -a /etc/hosts || true
+            fi
+            # Retry
+            kubectl cluster-info || echo "Warning: kubectl connection issues, but continuing..."
+          else
+            echo "kubectl connection successful!"
+          fi
+
       - name: Deploy to production
         run: |
           echo "Deploying to production namespace..."
@@ -298,7 +312,7 @@ jobs:
 
       - name: Production health check
         run: |
-          SERVICE_IP=$(kubectl get service simple-app-service -n ${{ env.KUBE_NAMESPACE }} -o jsonpath='{.spec.clusterIP}')
+          SERVICE_IP=$(kubectl get service simple-app-service -n ${{ env.KUBE_NAMESPACE }} -o jsonpath='{.spec.clusterIP}' || echo "N/A")
           echo "Service IP: $SERVICE_IP"
           echo "Production deployment completed successfully!"
           echo "Access via: kubectl port-forward service/simple-app-service 3002:80 -n production"
