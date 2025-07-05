@@ -5,7 +5,7 @@ from datetime import datetime
 def generate_random_string(length=10):
     """Generate a random string of specified length"""
     letters = string.ascii_letters + string.digits
-    return ''.join(random.choice(letters) for i in range(length))
+    return ''.join(random.choice(letters) for _ in range(length))
 
 def generate_random_number(min_val=1, max_val=100):
     """Generate a random number within specified range"""

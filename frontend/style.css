@@ -14,3 +14,16 @@ h1 {
   border-radius: 5px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
+
+.version-info {
+  background-color: #e8f4f8;
+  padding: 1em;
+  border-left: 4px solid #007acc;
+  margin: 1em 0;
+  border-radius: 3px;
+}
+
+.version-info p {
+  margin: 0.5em 0;
+  font-size: 0.9em;
+}
