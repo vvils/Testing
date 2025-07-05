@@ -16,7 +16,8 @@ spec:
     spec:
       containers:
         - name: simple-app
-          image: wilsonw321/simple-app:staging  # Different tag for staging
+          # The CI/CD pipeline will replace <COMMIT_HASH> with the actual commit hash
+          image: wilsonw321/simple-app:staging-<COMMIT_HASH>  # Different tag for staging
           imagePullPolicy: Always
           ports:
             - containerPort: 80
