@@ -144,22 +144,35 @@ jobs:
 
       - name: Deploy to production
         run: |
-          echo "Deploying to production namespace..."
-          kubectl get namespace ${{ env.KUBE_NAMESPACE }} || kubectl create namespace ${{ env.KUBE_NAMESPACE }}
-          sed "s/<COMMIT_HASH>/${{ github.sha }}/g" k8s/kubernetes.yaml | kubectl apply -f -
-          kubectl rollout status deployment/simple-app -n ${{ env.KUBE_NAMESPACE }} --timeout=300s
+          if [ "$SKIP_KUBECTL" = "true" ]; then
+            echo "Skipping Kubernetes deployment (no config found)"
+            echo "Docker image built and pushed successfully: ${{ env.DOCKER_IMAGE }}:latest and ${{ env.DOCKER_IMAGE }}:${{ github.sha }}"
+          else
+            echo "Deploying to production namespace..."
+            kubectl get namespace ${{ env.KUBE_NAMESPACE }} || kubectl create namespace ${{ env.KUBE_NAMESPACE }}
+            sed "s/<COMMIT_HASH>/${{ github.sha }}/g" k8s/kubernetes.yaml | kubectl apply -f -
+            kubectl rollout status deployment/simple-app -n ${{ env.KUBE_NAMESPACE }} --timeout=300s
+          fi
 
       - name: Get deployment status
         run: |
-          echo "=== Production Deployment Status ==="
-          kubectl get deployments -n ${{ env.KUBE_NAMESPACE }}
-          echo ""
-          echo "=== Production Pod Status ==="
-          kubectl get pods -l app=simple-app -n ${{ env.KUBE_NAMESPACE }}
+          if [ "$SKIP_KUBECTL" != "true" ]; then
+            echo "=== Production Deployment Status ==="
+            kubectl get deployments -n ${{ env.KUBE_NAMESPACE }}
+            echo ""
+            echo "=== Production Pod Status ==="
+            kubectl get pods -l app=simple-app -n ${{ env.KUBE_NAMESPACE }}
+          fi
 
       - name: Production health check
         run: |
-          SERVICE_IP=$(kubectl get service simple-app-service -n ${{ env.KUBE_NAMESPACE }} -o jsonpath='{.spec.clusterIP}')
-          echo "Service IP: $SERVICE_IP"
-          echo "Production deployment completed successfully!"
-          echo "Access via: kubectl port-forward service/simple-app-service 3002:80 -n production"
+          if [ "$SKIP_KUBECTL" != "true" ]; then
+            SERVICE_IP=$(kubectl get service simple-app-service -n ${{ env.KUBE_NAMESPACE }} -o jsonpath='{.spec.clusterIP}')
+            echo "Service IP: $SERVICE_IP"
+            echo "Production deployment completed successfully!"
+            echo "Access via: kubectl port-forward service/simple-app-service 3002:80 -n production"
+          else
+            echo "Production images ready for deployment:"
+            echo "- ${{ env.DOCKER_IMAGE }}:latest"
+            echo "- ${{ env.DOCKER_IMAGE }}:${{ github.sha }}"
+          fi
