@@ -8,7 +8,7 @@ on:
 
 env:
   DOCKER_IMAGE: wilsonw321/simple-app
-  KUBE_NAMESPACE: default
+  KUBE_NAMESPACE: production
 
 jobs:
   build-and-deploy:
@@ -33,9 +33,7 @@ jobs:
         with:
           images: ${{ env.DOCKER_IMAGE }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix={{branch}}-
+            type=sha
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker image
@@ -43,7 +41,9 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ env.DOCKER_IMAGE }}:latest
+            ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -59,9 +59,13 @@ jobs:
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
-      - name: Update deployment image
+      - name: Create production namespace if not exists
         run: |
-          kubectl set image deployment/simple-app simple-app=${{ env.DOCKER_IMAGE }}:${{ github.sha }} -n ${{ env.KUBE_NAMESPACE }}
+          kubectl create namespace ${{ env.KUBE_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Apply production configuration
+        run: |
+          sed "s/<COMMIT_HASH>/${{ github.sha }}/g" k8s/kubernetes.yaml | kubectl apply -f -
 
       - name: Wait for rollout to complete
         run: |
@@ -80,10 +84,6 @@ jobs:
 
       - name: Run health check
         run: |
-          # Get the service cluster IP
           SERVICE_IP=$(kubectl get service simple-app-service -n ${{ env.KUBE_NAMESPACE }} -o jsonpath='{.spec.clusterIP}')
           echo "Service IP: $SERVICE_IP"
-
-          # Health check (this will only work if you have network access to the cluster)
-          # For external access, you might need to use port-forward or ingress URL
           echo "Deployment completed successfully!"

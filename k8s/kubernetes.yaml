@@ -3,6 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: simple-app
+  namespace: production
 spec:
   replicas: 3
   selector:
@@ -15,7 +16,8 @@ spec:
     spec:
       containers:
         - name: simple-app
-          image: wilsonw321/simple-app:latest
+          # The CI/CD pipeline will replace <COMMIT_HASH> with the actual commit hash
+          image: wilsonw321/simple-app:<COMMIT_HASH>
           imagePullPolicy: Always
           ports:
             - containerPort: 80
@@ -53,6 +55,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: simple-app-service
+  namespace: production
 spec:
   selector:
     app: simple-app
@@ -67,6 +70,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: simple-app-ingress
+  namespace: production
 spec:
   ingressClassName: nginx
   rules:
