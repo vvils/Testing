@@ -43,40 +43,39 @@ jobs:
         with:
           version: "latest"
 
-      - name: Debug and setup kubectl config for WSL
+      - name: Setup kubectl config for self-hosted runner
         run: |
-          echo "=== WSL Environment Debug ==="
+          echo "=== Setting up kubectl for self-hosted runner ==="
           echo "User: $(whoami), Home: $HOME, PWD: $(pwd)"
-          echo "Looking for kubectl configs..."
-          find /home -name "config" -path "*/.kube/*" 2>/dev/null || echo "No .kube/config in /home"
-          find /mnt/c -name "config" -path "*/.kube/*" 2>/dev/null || echo "No .kube/config in Windows"
           
-          echo "=== Setting up kubectl ==="
+          # Create .kube directory
           mkdir -p $HOME/.kube
           
-          # Try to find and copy existing config
+          # Copy kubectl config from host user
           if [ -f "/home/wilson/.kube/config" ]; then
             cp /home/wilson/.kube/config $HOME/.kube/config
-            echo "Copied from /home/wilson/.kube/config"
+            chmod 600 $HOME/.kube/config
+            echo "kubectl config copied successfully"
           else
-            # Skip kubectl operations for now
-            echo "No kubectl config found - skipping Kubernetes operations"
-            echo "SKIP_KUBECTL=true" >> $GITHUB_ENV
+            echo "ERROR: kubectl config not found at /home/wilson/.kube/config"
+            echo "Please ensure Docker Desktop Kubernetes is running"
+            exit 1
           fi
+          
+          # Set KUBECONFIG environment variable
+          echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
+          
+          # Verify kubectl access
+          kubectl cluster-info
 
       - name: Deploy to staging
         run: |
-          if [ "$SKIP_KUBECTL" = "true" ]; then
-            echo "Skipping Kubernetes deployment (no config found)"
-            echo "Docker image built and pushed successfully: ${{ env.DOCKER_IMAGE }}:staging-${{ github.sha }}"
-          else
-            echo "Deploying to staging namespace..."
-            kubectl get namespace ${{ env.STAGING_NAMESPACE }} || kubectl create namespace ${{ env.STAGING_NAMESPACE }}
-            sed "s/<COMMIT_HASH>/${{ github.sha }}/g" k8s/kubernetes-staging.yaml | kubectl apply -f -
-            kubectl rollout status deployment/simple-app-staging -n ${{ env.STAGING_NAMESPACE }} --timeout=300s
-            echo "Staging deployment completed!"
-            echo "Access via: kubectl port-forward service/simple-app-staging-service 3001:80 -n staging"
-          fi
+          echo "Deploying to staging namespace..."
+          kubectl get namespace ${{ env.STAGING_NAMESPACE }} || kubectl create namespace ${{ env.STAGING_NAMESPACE }}
+          sed "s/<COMMIT_HASH>/${{ github.sha }}/g" k8s/kubernetes-staging.yaml | kubectl apply -f -
+          kubectl rollout status deployment/simple-app-staging -n ${{ env.STAGING_NAMESPACE }} --timeout=300s
+          echo "Staging deployment completed!"
+          echo "Access via: kubectl port-forward service/simple-app-staging-service 3001:80 -n staging"
 
   build-and-deploy-production:
     runs-on: ubuntu-latest
@@ -121,58 +120,49 @@ jobs:
         with:
           version: "latest"
 
-      - name: Debug and setup kubectl config for WSL
+      - name: Setup kubectl config for self-hosted runner
         run: |
-          echo "=== WSL Environment Debug ==="
+          echo "=== Setting up kubectl for self-hosted runner ==="
           echo "User: $(whoami), Home: $HOME, PWD: $(pwd)"
-          echo "Looking for kubectl configs..."
-          find /home -name "config" -path "*/.kube/*" 2>/dev/null || echo "No .kube/config in /home"
-          find /mnt/c -name "config" -path "*/.kube/*" 2>/dev/null || echo "No .kube/config in Windows"
           
-          echo "=== Setting up kubectl ==="
+          # Create .kube directory
           mkdir -p $HOME/.kube
           
-          # Try to find and copy existing config
+          # Copy kubectl config from host user
           if [ -f "/home/wilson/.kube/config" ]; then
             cp /home/wilson/.kube/config $HOME/.kube/config
-            echo "Copied from /home/wilson/.kube/config"
+            chmod 600 $HOME/.kube/config
+            echo "kubectl config copied successfully"
           else
-            # Skip kubectl operations for now
-            echo "No kubectl config found - skipping Kubernetes operations"
-            echo "SKIP_KUBECTL=true" >> $GITHUB_ENV
+            echo "ERROR: kubectl config not found at /home/wilson/.kube/config"
+            echo "Please ensure Docker Desktop Kubernetes is running"
+            exit 1
           fi
+          
+          # Set KUBECONFIG environment variable
+          echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
+          
+          # Verify kubectl access
+          kubectl cluster-info
 
       - name: Deploy to production
         run: |
-          if [ "$SKIP_KUBECTL" = "true" ]; then
-            echo "Skipping Kubernetes deployment (no config found)"
-            echo "Docker image built and pushed successfully: ${{ env.DOCKER_IMAGE }}:latest and ${{ env.DOCKER_IMAGE }}:${{ github.sha }}"
-          else
-            echo "Deploying to production namespace..."
-            kubectl get namespace ${{ env.KUBE_NAMESPACE }} || kubectl create namespace ${{ env.KUBE_NAMESPACE }}
-            sed "s/<COMMIT_HASH>/${{ github.sha }}/g" k8s/kubernetes.yaml | kubectl apply -f -
-            kubectl rollout status deployment/simple-app -n ${{ env.KUBE_NAMESPACE }} --timeout=300s
-          fi
+          echo "Deploying to production namespace..."
+          kubectl get namespace ${{ env.KUBE_NAMESPACE }} || kubectl create namespace ${{ env.KUBE_NAMESPACE }}
+          sed "s/<COMMIT_HASH>/${{ github.sha }}/g" k8s/kubernetes.yaml | kubectl apply -f -
+          kubectl rollout status deployment/simple-app -n ${{ env.KUBE_NAMESPACE }} --timeout=300s
 
       - name: Get deployment status
         run: |
-          if [ "$SKIP_KUBECTL" != "true" ]; then
-            echo "=== Production Deployment Status ==="
-            kubectl get deployments -n ${{ env.KUBE_NAMESPACE }}
-            echo ""
-            echo "=== Production Pod Status ==="
-            kubectl get pods -l app=simple-app -n ${{ env.KUBE_NAMESPACE }}
-          fi
+          echo "=== Production Deployment Status ==="
+          kubectl get deployments -n ${{ env.KUBE_NAMESPACE }}
+          echo ""
+          echo "=== Production Pod Status ==="
+          kubectl get pods -l app=simple-app -n ${{ env.KUBE_NAMESPACE }}
 
       - name: Production health check
         run: |
-          if [ "$SKIP_KUBECTL" != "true" ]; then
-            SERVICE_IP=$(kubectl get service simple-app-service -n ${{ env.KUBE_NAMESPACE }} -o jsonpath='{.spec.clusterIP}')
-            echo "Service IP: $SERVICE_IP"
-            echo "Production deployment completed successfully!"
-            echo "Access via: kubectl port-forward service/simple-app-service 3002:80 -n production"
-          else
-            echo "Production images ready for deployment:"
-            echo "- ${{ env.DOCKER_IMAGE }}:latest"
-            echo "- ${{ env.DOCKER_IMAGE }}:${{ github.sha }}"
-          fi
+          SERVICE_IP=$(kubectl get service simple-app-service -n ${{ env.KUBE_NAMESPACE }} -o jsonpath='{.spec.clusterIP}')
+          echo "Service IP: $SERVICE_IP"
+          echo "Production deployment completed successfully!"
+          echo "Access via: kubectl port-forward service/simple-app-service 3002:80 -n production"
