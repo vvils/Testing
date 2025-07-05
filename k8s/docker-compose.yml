@@ -7,8 +7,10 @@ services:
     ports:
       - "3000:80"
     volumes:
-      # Mount the src directory for hot reloading
-      - ../src:/usr/share/nginx/html
+      # Mount the frontend directory for hot reloading
+      - ../frontend:/usr/share/nginx/html
+      # Mount the backend directory for development
+      - ../backend:/app/backend
       # Optional: Mount nginx config if you want to customize it
       # - ./nginx.conf:/etc/nginx/nginx.conf
     restart: unless-stopped
