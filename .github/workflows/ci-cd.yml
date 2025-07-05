@@ -38,12 +38,22 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy to staging using local kubectl
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: "latest"
+
+      - name: Use local kubectl config (self-hosted runner)
+        run: |
+          echo "Using existing local kubectl configuration..."
+          kubectl cluster-info
+
+      - name: Deploy to staging
         run: |
           echo "Deploying to staging namespace..."
-          /usr/local/bin/kubectl get namespace ${{ env.STAGING_NAMESPACE }} || /usr/local/bin/kubectl create namespace ${{ env.STAGING_NAMESPACE }}
-          sed "s/<COMMIT_HASH>/${{ github.sha }}/g" k8s/kubernetes-staging.yaml | /usr/local/bin/kubectl apply -f -
-          /usr/local/bin/kubectl rollout status deployment/simple-app-staging -n ${{ env.STAGING_NAMESPACE }} --timeout=300s
+          kubectl get namespace ${{ env.STAGING_NAMESPACE }} || kubectl create namespace ${{ env.STAGING_NAMESPACE }}
+          sed "s/<COMMIT_HASH>/${{ github.sha }}/g" k8s/kubernetes-staging.yaml | kubectl apply -f -
+          kubectl rollout status deployment/simple-app-staging -n ${{ env.STAGING_NAMESPACE }} --timeout=300s
           echo "Staging deployment completed!"
           echo "Access via: kubectl port-forward service/simple-app-staging-service 3001:80 -n staging"
 
@@ -85,24 +95,34 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy to production using local kubectl
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: "latest"
+
+      - name: Use local kubectl config (self-hosted runner)
+        run: |
+          echo "Using existing local kubectl configuration..."
+          kubectl cluster-info
+
+      - name: Deploy to production
         run: |
           echo "Deploying to production namespace..."
-          /usr/local/bin/kubectl get namespace ${{ env.KUBE_NAMESPACE }} || /usr/local/bin/kubectl create namespace ${{ env.KUBE_NAMESPACE }}
-          sed "s/<COMMIT_HASH>/${{ github.sha }}/g" k8s/kubernetes.yaml | /usr/local/bin/kubectl apply -f -
-          /usr/local/bin/kubectl rollout status deployment/simple-app -n ${{ env.KUBE_NAMESPACE }} --timeout=300s
+          kubectl get namespace ${{ env.KUBE_NAMESPACE }} || kubectl create namespace ${{ env.KUBE_NAMESPACE }}
+          sed "s/<COMMIT_HASH>/${{ github.sha }}/g" k8s/kubernetes.yaml | kubectl apply -f -
+          kubectl rollout status deployment/simple-app -n ${{ env.KUBE_NAMESPACE }} --timeout=300s
 
       - name: Get deployment status
         run: |
           echo "=== Production Deployment Status ==="
-          /usr/local/bin/kubectl get deployments -n ${{ env.KUBE_NAMESPACE }}
+          kubectl get deployments -n ${{ env.KUBE_NAMESPACE }}
           echo ""
           echo "=== Production Pod Status ==="
-          /usr/local/bin/kubectl get pods -l app=simple-app -n ${{ env.KUBE_NAMESPACE }}
+          kubectl get pods -l app=simple-app -n ${{ env.KUBE_NAMESPACE }}
 
       - name: Production health check
         run: |
-          SERVICE_IP=$(/usr/local/bin/kubectl get service simple-app-service -n ${{ env.KUBE_NAMESPACE }} -o jsonpath='{.spec.clusterIP}')
+          SERVICE_IP=$(kubectl get service simple-app-service -n ${{ env.KUBE_NAMESPACE }} -o jsonpath='{.spec.clusterIP}')
           echo "Service IP: $SERVICE_IP"
           echo "Production deployment completed successfully!"
           echo "Access via: kubectl port-forward service/simple-app-service 3002:80 -n production"
