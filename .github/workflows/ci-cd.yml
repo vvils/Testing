@@ -51,16 +51,20 @@ jobs:
           # Create .kube directory
           mkdir -p $HOME/.kube
           
-          # Use base64 encoded config from .env file
-          if [ -f ".env" ] && grep -q "KUBE_CONFIG=" .env; then
-            echo "Using base64 encoded kubectl config from .env file"
-            KUBE_CONFIG_B64=$(grep "KUBE_CONFIG=" .env | cut -d '=' -f2)
-            echo "$KUBE_CONFIG_B64" | base64 -d > $HOME/.kube/config
+          # Use base64 encoded config from GitHub Secret or local file
+          if [ -n "${{ secrets.KUBE_CONFIG }}" ]; then
+            echo "Using kubectl config from GitHub Secret"
+            echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
             chmod 600 $HOME/.kube/config
-            echo "kubectl config decoded and saved successfully"
+            echo "kubectl config decoded from secret successfully"
+          elif [ -f "/home/wilson/.kube/config" ]; then
+            echo "Using kubectl config from host user (fallback)"
+            cp /home/wilson/.kube/config $HOME/.kube/config
+            chmod 600 $HOME/.kube/config
+            echo "kubectl config copied successfully"
           else
-            echo "ERROR: kubectl config not found in .env file"
-            echo "Please ensure .env file exists with KUBE_CONFIG variable"
+            echo "ERROR: No kubectl config available"
+            echo "Please set KUBE_CONFIG secret or ensure host config exists"
             exit 1
           fi
           
@@ -130,16 +134,20 @@ jobs:
           # Create .kube directory
           mkdir -p $HOME/.kube
           
-          # Use base64 encoded config from .env file
-          if [ -f ".env" ] && grep -q "KUBE_CONFIG=" .env; then
-            echo "Using base64 encoded kubectl config from .env file"
-            KUBE_CONFIG_B64=$(grep "KUBE_CONFIG=" .env | cut -d '=' -f2)
-            echo "$KUBE_CONFIG_B64" | base64 -d > $HOME/.kube/config
+          # Use base64 encoded config from GitHub Secret or local file
+          if [ -n "${{ secrets.KUBE_CONFIG }}" ]; then
+            echo "Using kubectl config from GitHub Secret"
+            echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
             chmod 600 $HOME/.kube/config
-            echo "kubectl config decoded and saved successfully"
+            echo "kubectl config decoded from secret successfully"
+          elif [ -f "/home/wilson/.kube/config" ]; then
+            echo "Using kubectl config from host user (fallback)"
+            cp /home/wilson/.kube/config $HOME/.kube/config
+            chmod 600 $HOME/.kube/config
+            echo "kubectl config copied successfully"
           else
-            echo "ERROR: kubectl config not found in .env file"
-            echo "Please ensure .env file exists with KUBE_CONFIG variable"
+            echo "ERROR: No kubectl config available"
+            echo "Please set KUBE_CONFIG secret or ensure host config exists"
             exit 1
           fi
           
