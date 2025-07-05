@@ -48,10 +48,12 @@ jobs:
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
+          echo "Testing kubectl connection..."
+          kubectl cluster-info || echo "kubectl connection failed"
 
       - name: Create staging namespace if not exists
         run: |
-          kubectl create namespace ${{ env.STAGING_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+          kubectl get namespace ${{ env.STAGING_NAMESPACE }} || kubectl create namespace ${{ env.STAGING_NAMESPACE }}
 
       - name: Apply staging configuration
         run: |
@@ -114,10 +116,12 @@ jobs:
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
+          echo "Testing kubectl connection..."
+          kubectl cluster-info || echo "kubectl connection failed"
 
       - name: Create production namespace if not exists
         run: |
-          kubectl create namespace ${{ env.KUBE_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+          kubectl get namespace ${{ env.KUBE_NAMESPACE }} || kubectl create namespace ${{ env.KUBE_NAMESPACE }}
 
       - name: Apply production configuration
         run: |
