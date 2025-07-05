@@ -6,9 +6,15 @@
 <body>
     <h1>Health Check</h1>
     <p>Status: OK</p>
+    <p>Service: Simple App</p>
+    <p>Environment: <span id="environment">Unknown</span></p>
     <p>Timestamp: <span id="timestamp"></span></p>
     <script>
         document.getElementById('timestamp').textContent = new Date().toISOString();
+        // Try to detect environment from URL or set default
+        const hostname = window.location.hostname;
+        const environment = hostname.includes('staging') ? 'staging' : 'production';
+        document.getElementById('environment').textContent = environment;
     </script>
 </body>
 </html> 
