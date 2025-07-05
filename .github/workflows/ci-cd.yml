@@ -52,9 +52,9 @@ jobs:
           mkdir -p $HOME/.kube
           
           # Use base64 encoded config from GitHub Secret or local file
-          if [ -n "${{ secrets.KUBE_CONFIG }}" ]; then
+          if [ ! -z "${{ secrets.KUBE_CONFIG }}" ]; then
             echo "Using kubectl config from GitHub Secret"
-            echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+            echo '${{ secrets.KUBE_CONFIG }}' | base64 -d > $HOME/.kube/config
             chmod 600 $HOME/.kube/config
             echo "kubectl config decoded from secret successfully"
           elif [ -f "/home/wilson/.kube/config" ]; then
@@ -135,9 +135,9 @@ jobs:
           mkdir -p $HOME/.kube
           
           # Use base64 encoded config from GitHub Secret or local file
-          if [ -n "${{ secrets.KUBE_CONFIG }}" ]; then
+          if [ ! -z "${{ secrets.KUBE_CONFIG }}" ]; then
             echo "Using kubectl config from GitHub Secret"
-            echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+            echo '${{ secrets.KUBE_CONFIG }}' | base64 -d > $HOME/.kube/config
             chmod 600 $HOME/.kube/config
             echo "kubectl config decoded from secret successfully"
           elif [ -f "/home/wilson/.kube/config" ]; then
