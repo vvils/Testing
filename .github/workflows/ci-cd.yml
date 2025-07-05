@@ -43,9 +43,14 @@ jobs:
         with:
           version: "latest"
 
-      - name: Use local kubectl config (self-hosted runner)
+      - name: Setup kubectl config for self-hosted runner
         run: |
-          echo "Using existing local kubectl configuration..."
+          echo "Setting up kubectl configuration..."
+          mkdir -p $HOME/.kube
+          # Set KUBECONFIG environment variable to point to local config
+          export KUBECONFIG=/home/wilson/.kube/config
+          echo "KUBECONFIG=/home/wilson/.kube/config" >> $GITHUB_ENV
+          # Test connection
           kubectl cluster-info
 
       - name: Deploy to staging
@@ -100,9 +105,14 @@ jobs:
         with:
           version: "latest"
 
-      - name: Use local kubectl config (self-hosted runner)
+      - name: Setup kubectl config for self-hosted runner
         run: |
-          echo "Using existing local kubectl configuration..."
+          echo "Setting up kubectl configuration..."
+          mkdir -p $HOME/.kube
+          # Set KUBECONFIG environment variable to point to local config
+          export KUBECONFIG=/home/wilson/.kube/config
+          echo "KUBECONFIG=/home/wilson/.kube/config" >> $GITHUB_ENV
+          # Test connection
           kubectl cluster-info
 
       - name: Deploy to production
