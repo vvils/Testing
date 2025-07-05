@@ -51,22 +51,16 @@ jobs:
           # Create .kube directory
           mkdir -p $HOME/.kube
           
-          # Method 1: Try to use base64 encoded config from .env
-          if [ -f "/home/wilson/Projects/tst/.env" ] && grep -q "KUBE_CONFIG=" /home/wilson/Projects/tst/.env; then
+          # Use base64 encoded config from .env file
+          if [ -f ".env" ] && grep -q "KUBE_CONFIG=" .env; then
             echo "Using base64 encoded kubectl config from .env file"
-            KUBE_CONFIG_B64=$(grep "KUBE_CONFIG=" /home/wilson/Projects/tst/.env | cut -d '=' -f2)
+            KUBE_CONFIG_B64=$(grep "KUBE_CONFIG=" .env | cut -d '=' -f2)
             echo "$KUBE_CONFIG_B64" | base64 -d > $HOME/.kube/config
             chmod 600 $HOME/.kube/config
             echo "kubectl config decoded and saved successfully"
-          # Method 2: Fallback to copying from host user
-          elif [ -f "/home/wilson/.kube/config" ]; then
-            echo "Using kubectl config from host user"
-            cp /home/wilson/.kube/config $HOME/.kube/config
-            chmod 600 $HOME/.kube/config
-            echo "kubectl config copied successfully"
           else
-            echo "ERROR: kubectl config not found in .env or at /home/wilson/.kube/config"
-            echo "Please ensure Docker Desktop Kubernetes is running and config is available"
+            echo "ERROR: kubectl config not found in .env file"
+            echo "Please ensure .env file exists with KUBE_CONFIG variable"
             exit 1
           fi
           
@@ -136,22 +130,16 @@ jobs:
           # Create .kube directory
           mkdir -p $HOME/.kube
           
-          # Method 1: Try to use base64 encoded config from .env
-          if [ -f "/home/wilson/Projects/tst/.env" ] && grep -q "KUBE_CONFIG=" /home/wilson/Projects/tst/.env; then
+          # Use base64 encoded config from .env file
+          if [ -f ".env" ] && grep -q "KUBE_CONFIG=" .env; then
             echo "Using base64 encoded kubectl config from .env file"
-            KUBE_CONFIG_B64=$(grep "KUBE_CONFIG=" /home/wilson/Projects/tst/.env | cut -d '=' -f2)
+            KUBE_CONFIG_B64=$(grep "KUBE_CONFIG=" .env | cut -d '=' -f2)
             echo "$KUBE_CONFIG_B64" | base64 -d > $HOME/.kube/config
             chmod 600 $HOME/.kube/config
             echo "kubectl config decoded and saved successfully"
-          # Method 2: Fallback to copying from host user
-          elif [ -f "/home/wilson/.kube/config" ]; then
-            echo "Using kubectl config from host user"
-            cp /home/wilson/.kube/config $HOME/.kube/config
-            chmod 600 $HOME/.kube/config
-            echo "kubectl config copied successfully"
           else
-            echo "ERROR: kubectl config not found in .env or at /home/wilson/.kube/config"
-            echo "Please ensure Docker Desktop Kubernetes is running and config is available"
+            echo "ERROR: kubectl config not found in .env file"
+            echo "Please ensure .env file exists with KUBE_CONFIG variable"
             exit 1
           fi
           
