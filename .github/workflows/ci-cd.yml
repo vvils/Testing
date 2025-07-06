@@ -54,10 +54,15 @@ jobs:
           SERVICE_IP=$(kubectl get service simple-app-staging-service -n ${{ env.STAGING_NAMESPACE }} -o jsonpath='{.spec.clusterIP}' || echo "N/A")
           echo "Service IP: $SERVICE_IP"
           echo "Staging deployment completed successfully!"
-          echo "Access via: kubectl port-forward service/simple-app-staging-service 3001:80 -n staging"
-          echo "Starting port-forward for staging environment..."
-          kubectl port-forward service/simple-app-staging-service 3001:80 -n staging --address=0.0.0.0 &
-          echo "Staging available at: http://localhost:3001"
+          echo ""
+          echo "🚀 To access staging locally:"
+          echo "  Method 1: Use the helper script"
+          echo "    ./scripts/port-forward.sh staging"
+          echo ""
+          echo "  Method 2: Manual port forwarding"
+          echo "    kubectl port-forward service/simple-app-staging-service 3001:80 -n staging"
+          echo ""
+          echo "  Then visit: http://localhost:3001"
 
   build-and-deploy-production:
     runs-on: self-hosted
@@ -113,7 +118,12 @@ jobs:
           SERVICE_IP=$(kubectl get service simple-app-service -n ${{ env.KUBE_NAMESPACE }} -o jsonpath='{.spec.clusterIP}' || echo "N/A")
           echo "Service IP: $SERVICE_IP"
           echo "Production deployment completed successfully!"
-          echo "Access via: kubectl port-forward service/simple-app-service 3002:80 -n production"
-          echo "Starting port-forward for production environment..."
-          kubectl port-forward service/simple-app-service 3002:80 -n production --address=0.0.0.0 &
-          echo "Production available at: http://localhost:3002" 
+          echo ""
+          echo "🚀 To access production locally:"
+          echo "  Method 1: Use the helper script"
+          echo "    ./scripts/port-forward.sh production"
+          echo ""
+          echo "  Method 2: Manual port forwarding"
+          echo "    kubectl port-forward service/simple-app-service 3002:80 -n production"
+          echo ""
+          echo "  Then visit: http://localhost:3002" 
