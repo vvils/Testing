@@ -171,7 +171,9 @@ ehthumbs.db
 Thumbs.db
 
 # GitHub Actions Runner (should never be committed)
+# The actions-runner directory contains sensitive data and large files
 actions-runner/
+!actions-runner/.gitkeep
 
 # IDE files
 .vscode/
