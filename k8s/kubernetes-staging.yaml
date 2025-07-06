@@ -17,10 +17,10 @@ spec:
       containers:
         - name: django-backend
           # The CI/CD pipeline will replace <COMMIT_HASH> with the actual commit hash
-          image: wilsonw321/simple-app:staging-<COMMIT_HASH>  # Different tag for staging
+          image: wilsonw321/simple-app:staging-ff54c6ea567b51544d100895b850f8a421c192b5  # Different tag for staging
           imagePullPolicy: Always
           ports:
-            - containerPort: 8000
+            - containerPort: 80
           resources:
             requests:
               memory: "256Mi"
@@ -38,16 +38,18 @@ spec:
                 secretKeyRef:
                   name: django-secret-staging
                   key: secret-key
+            - name: ALLOWED_HOSTS
+              value: "localhost,127.0.0.1,backend,django-backend,staging.yourdomain.com,*"
           livenessProbe:
             httpGet:
-              path: /api/test/  # Django API health endpoint
-              port: 8000
+              path: /  # Nginx health endpoint
+              port: 80
             initialDelaySeconds: 30
             periodSeconds: 30
           readinessProbe:
             httpGet:
-              path: /api/test/
-              port: 8000
+              path: /
+              port: 80
             initialDelaySeconds: 15
             periodSeconds: 10
 
@@ -62,8 +64,8 @@ spec:
   selector:
     app: simple-app-staging
   ports:
-    - port: 8000
-      targetPort: 8000
+    - port: 80
+      targetPort: 80
   type: ClusterIP
 
 ---
@@ -87,4 +89,4 @@ spec:
               service:
                 name: simple-app-staging-service
                 port:
-                  number: 8000 
+                  number: 80 
