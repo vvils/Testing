@@ -1,19 +1,41 @@
-FROM nginx:alpine
+# Multi-stage build for Django backend
+FROM python:3.11-slim as backend
 
-# Install Python for backend functionality
-RUN apk add --no-cache python3 py3-pip
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-# Copy frontend files to nginx directory
-COPY frontend/index.html /usr/share/nginx/html/index.html
-COPY frontend/style.css /usr/share/nginx/html/style.css
-COPY frontend/script.js /usr/share/nginx/html/script.js
-COPY frontend/health.html /usr/share/nginx/html/health.html
+# Set work directory
+WORKDIR /app
 
-# Copy backend files
-COPY backend/ /app/backend/
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies (using --break-system-packages for containerized environment)
-RUN pip3 install --break-system-packages -r /app/backend/requirements.txt
+# Copy requirements first for better caching
+COPY backend/requirements.txt /app/
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose port 80 for nginx
-EXPOSE 80
+# Copy backend project
+COPY backend/ /app/
+
+# Copy entrypoint script explicitly and make it executable
+COPY backend/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Create a non-root user for security
+RUN adduser --disabled-password --gecos '' appuser
+RUN chown -R appuser:appuser /app
+
+# Expose port 8000 for Django
+EXPOSE 8000
+
+# Set entrypoint to handle migrations
+ENTRYPOINT ["/app/entrypoint.sh"]
+
+# Switch to non-root user AFTER setting entrypoint
+USER appuser
+
+# Default command for production
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "django_config.wsgi:application"]
