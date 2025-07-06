@@ -282,3 +282,7 @@ temp/
 
 # Local development
 local/
+
+.claude/
+
+k8s/django-secrets.yaml
