@@ -1,0 +1,85 @@
+# Test Sidecar Deployment for Staging
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simple-app-staging
+  namespace: staging
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: simple-app-staging
+  template:
+    metadata:
+      labels:
+        app: simple-app-staging
+    spec:
+      containers:
+        # Nginx Frontend Container (serves frontend + proxy to Django)
+        - name: nginx-frontend
+          image: wilsonw321/simple-app-nginx:staging-4850c1e58c8250891c7ebb8573a4908298d85198
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3001
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+        
+        # Django Backend Container (API server) - Using working image
+        - name: django-backend
+          image: wilsonw321/simple-app:staging-ff54c6ea567b51544d100895b850f8a421c192b5
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          env:
+            - name: ENVIRONMENT
+              value: "staging"
+            - name: DEBUG
+              value: "True"
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: django-secret-staging
+                  key: secret-key
+            - name: ALLOWED_HOSTS
+              value: "localhost,127.0.0.1,backend,django-backend,staging.yourdomain.com,*"
+          livenessProbe:
+            httpGet:
+              path: /api/test/
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/test/
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10

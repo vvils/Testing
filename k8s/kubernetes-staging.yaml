@@ -6,6 +6,11 @@ metadata:
   namespace: staging
 spec:
   replicas: 1  # Single replica for staging
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1  # Allow the single pod to be terminated
+      maxSurge: 1        # Allow one extra pod during rollout
   selector:
     matchLabels:
       app: simple-app-staging
@@ -15,35 +20,68 @@ spec:
         app: simple-app-staging
     spec:
       containers:
-        - name: simple-app
-          # The CI/CD pipeline will replace <COMMIT_HASH> with the actual commit hash
-          image: wilsonw321/simple-app:staging-<COMMIT_HASH>  # Different tag for staging
+        # Nginx Frontend Container (serves frontend + proxy to Django)
+        - name: nginx-frontend
+          image: wilsonw321/simple-app-nginx:staging-<COMMIT_HASH>
           imagePullPolicy: Always
           ports:
-            - containerPort: 80
+            - containerPort: 3001
           resources:
             requests:
               memory: "128Mi"
-              cpu: "250m"
+              cpu: "100m"
             limits:
               memory: "256Mi"
+              cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+        
+        # Django Backend Container (API server)
+        - name: django-backend
+          image: wilsonw321/simple-app-django:staging-<COMMIT_HASH>
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
               cpu: "500m"
           env:
             - name: ENVIRONMENT
               value: "staging"
             - name: DEBUG
-              value: "true"
+              value: "True"
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: django-secret-staging
+                  key: secret-key
+            - name: ALLOWED_HOSTS
+              value: "localhost,127.0.0.1,backend,django-backend,staging.yourdomain.com,*"
           livenessProbe:
             httpGet:
-              path: /health.html  # Dedicated health endpoint
-              port: 80
-            initialDelaySeconds: 10
+              path: /api/test/
+              port: 8000
+            initialDelaySeconds: 30
             periodSeconds: 30
           readinessProbe:
             httpGet:
-              path: /health.html
-              port: 80
-            initialDelaySeconds: 5
+              path: /api/test/
+              port: 8000
+            initialDelaySeconds: 15
             periodSeconds: 10
 
 ---
@@ -57,8 +95,8 @@ spec:
   selector:
     app: simple-app-staging
   ports:
-    - port: 80
-      targetPort: 80
+    - port: 3001
+      targetPort: 3001
   type: ClusterIP
 
 ---
@@ -82,4 +120,4 @@ spec:
               service:
                 name: simple-app-staging-service
                 port:
-                  number: 80 
+                  number: 3001 

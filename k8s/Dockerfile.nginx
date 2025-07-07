@@ -1,0 +1,22 @@
+# Nginx Frontend Container for Sidecar Pattern
+FROM nginx:1.29-alpine
+
+# Copy custom nginx configuration for staging
+COPY k8s/nginx-staging.conf /etc/nginx/nginx.conf
+
+# Copy frontend static files
+COPY frontend/ /usr/share/nginx/html/
+
+# Create nginx user and set permissions
+RUN chown -R nginx:nginx /usr/share/nginx/html && \
+    chmod -R 755 /usr/share/nginx/html
+
+# Expose the appropriate port for each environment
+# This will be overridden in Kubernetes deployment
+EXPOSE 3001
+
+# Use nginx user for security
+USER nginx
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

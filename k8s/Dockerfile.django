@@ -1,5 +1,5 @@
-# Multi-stage build for Django backend
-FROM python:3.11-slim as backend
+# Django Backend Container for Sidecar Pattern
+FROM python:3.11-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -37,5 +37,5 @@ ENTRYPOINT ["/app/entrypoint.sh"]
 # Switch to non-root user AFTER setting entrypoint
 USER appuser
 
-# Default command for production
+# Command for Django - bind to port 8000
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "django_config.wsgi:application"]

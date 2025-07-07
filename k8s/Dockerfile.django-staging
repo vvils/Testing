@@ -1,5 +1,5 @@
-# Multi-stage build for Django backend
-FROM python:3.11-slim as backend
+# Django Backend Container for Staging Sidecar Pattern
+FROM python:3.11-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -28,8 +28,8 @@ RUN chmod +x /app/entrypoint.sh
 RUN adduser --disabled-password --gecos '' appuser
 RUN chown -R appuser:appuser /app
 
-# Expose port 8000 for Django
-EXPOSE 8000
+# Expose port 8001 for Django staging
+EXPOSE 8001
 
 # Set entrypoint to handle migrations
 ENTRYPOINT ["/app/entrypoint.sh"]
@@ -37,5 +37,5 @@ ENTRYPOINT ["/app/entrypoint.sh"]
 # Switch to non-root user AFTER setting entrypoint
 USER appuser
 
-# Default command for production
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "django_config.wsgi:application"]
+# Command for staging - bind to port 8001
+CMD ["gunicorn", "--bind", "0.0.0.0:8001", "django_config.wsgi:application"]
