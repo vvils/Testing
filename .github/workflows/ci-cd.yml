@@ -60,7 +60,7 @@ jobs:
           echo "    ./scripts/port-forward.sh staging"
           echo ""
           echo "  Method 2: Manual port forwarding"
-          echo "    kubectl port-forward service/simple-app-staging-service 3001:80 -n staging"
+          echo "    kubectl port-forward service/simple-app-staging-service 3001:3001 -n staging"
           echo ""
           echo "  Then visit: http://localhost:3001"
 
@@ -124,6 +124,6 @@ jobs:
           echo "    ./scripts/port-forward.sh production"
           echo ""
           echo "  Method 2: Manual port forwarding"
-          echo "    kubectl port-forward service/simple-app-service 3002:80 -n production"
+          echo "    kubectl port-forward service/simple-app-service 3002:8000 -n production"
           echo ""
           echo "  Then visit: http://localhost:3002" 

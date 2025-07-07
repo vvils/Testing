@@ -55,7 +55,7 @@ function start_staging() {
     echo -e "${GREEN}Visit: http://localhost:3001${NC}"
     echo -e "${YELLOW}Press Ctrl+C to stop${NC}"
     
-    kubectl port-forward service/simple-app-staging-service 3001:80 -n staging
+    kubectl port-forward service/simple-app-staging-service 3001:3001 -n staging
 }
 
 function start_production() {
@@ -74,7 +74,7 @@ function start_production() {
     echo -e "${GREEN}Visit: http://localhost:3002${NC}"
     echo -e "${YELLOW}Press Ctrl+C to stop${NC}"
     
-    kubectl port-forward service/simple-app-service 3002:80 -n production
+    kubectl port-forward service/simple-app-service 3002:8000 -n production
 }
 
 # Main script
