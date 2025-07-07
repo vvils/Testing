@@ -22,7 +22,7 @@ spec:
       containers:
         # Nginx Frontend Container (serves frontend + proxy to Django)
         - name: nginx-frontend
-          image: wilsonw321/simple-app-nginx:staging-74cef7a580ade1b6e03197425dfc063cc36e4fe6
+          image: wilsonw321/simple-app-nginx:staging-<COMMIT_HASH>
           imagePullPolicy: Always
           ports:
             - containerPort: 3001
@@ -48,7 +48,7 @@ spec:
         
         # Django Backend Container (API server)
         - name: django-backend
-          image: wilsonw321/simple-app-django:staging-74cef7a580ade1b6e03197425dfc063cc36e4fe6
+          image: wilsonw321/simple-app-django:staging-<COMMIT_HASH>
           imagePullPolicy: Always
           ports:
             - containerPort: 8000

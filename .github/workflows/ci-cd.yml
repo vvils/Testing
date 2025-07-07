@@ -26,13 +26,23 @@ jobs:
           dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
           kube_config: ${{ secrets.KUBE_CONFIG }}
 
-      - name: Build and push staging image
+      - name: Build and push nginx frontend image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./k8s/Dockerfile
+          file: ./k8s/Dockerfile.nginx
           push: true
-          tags: ${{ env.DOCKER_IMAGE }}:staging-${{ github.sha }}
+          tags: ${{ env.DOCKER_IMAGE }}-nginx:staging-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Django backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./k8s/Dockerfile.django
+          push: true
+          tags: ${{ env.DOCKER_IMAGE }}-django:staging-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -87,15 +97,28 @@ jobs:
             type=sha
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push production image
+      - name: Build and push nginx frontend image for production
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./k8s/Dockerfile
+          file: ./k8s/Dockerfile.nginx
           push: true
           tags: |
-            ${{ env.DOCKER_IMAGE }}:latest
-            ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
+            ${{ env.DOCKER_IMAGE }}-nginx:latest
+            ${{ env.DOCKER_IMAGE }}-nginx:${{ github.sha }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Django backend image for production
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./k8s/Dockerfile.django
+          push: true
+          tags: |
+            ${{ env.DOCKER_IMAGE }}-django:latest
+            ${{ env.DOCKER_IMAGE }}-django:${{ github.sha }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
